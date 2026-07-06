@@ -252,7 +252,7 @@ async function fetchSheet(){
     const res = await fetch(DATA_FILE + "?t=" + Date.now());
     if(!res.ok) throw new Error("HTTP " + res.status);
     const buf = await res.arrayBuffer();
-    const wb = XLSX.read(buf, { type: "array" });
+    const wb = XLSX.read(buf, { type: "array", cellDates: true });
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws);
     pedidos = normalize(rows);
@@ -336,19 +336,73 @@ function applyRoleFilter(list){
 }
 
 // ── NORMALIZAR ────────────────────────────────────────────────────────
+function formatFecha(val){
+  if(!val || val==="S/F" || val==="") return "";
+  if(val instanceof Date){
+    if(isNaN(val.getTime())) return "";
+    const y=val.getFullYear(), m=String(val.getMonth()+1).padStart(2,"0"), d=String(val.getDate()).padStart(2,"0");
+    return `${d}/${m}/${y}`;
+  }
+  if(typeof val==="number"){
+    const dd=new Date(Math.round((val-25569)*86400*1000));
+    return `${String(dd.getUTCDate()).padStart(2,"0")}/${String(dd.getUTCMonth()+1).padStart(2,"0")}/${dd.getUTCFullYear()}`;
+  }
+  return String(val);
+}
+
+function detectFormat(rows){
+  if(!rows||!rows.length) return "simple";
+  const keys=Object.keys(rows[0]).map(k=>k.toLowerCase());
+  return (keys.includes("hoja de ruta")||keys.includes("estatus chofer"))?"excon":"simple";
+}
+
+function mapEtapa(chofer, asig){
+  const c=String(chofer||"").trim(), a=String(asig||"").trim();
+  if(c==="Entrega Completa"&&a==="Completada") return -1;
+  if(c==="Entrega Completa") return 5;
+  if(c==="Entrega Parcial")  return 4;
+  if(c==="No Entregada")     return 3;
+  return 2;
+}
+
 function normalize(rows){
+  const fmt=detectFormat(rows);
+  if(fmt==="excon"){
+    return rows.map(r=>{
+      const get=(...keys)=>{for(const k of keys){const v=r[k]??r[Object.keys(r).find(rk=>rk.toLowerCase()===k.toLowerCase())];if(v!=null&&v!=="")return v;}return "";};
+      const estatusChofer=get("Estatus Chofer"), estatusAsig=get("Estatus Asignación","Estatus Asignacion");
+      const etapaIdx=mapEtapa(estatusChofer,estatusAsig);
+      if(etapaIdx<0) return null;
+      const motivo=get("Motivo de Entrega Parcial o No Entrega");
+      const comentario=get("Comentarios");
+      const detalleParts=[comentario,motivo].filter(v=>v&&String(v).trim());
+      const nuevaFecha=get("Nueva Fecha"), fechaEntrega=get("Fecha Entrega");
+      return {
+        oc:       String(get("OC/Tarea")||""),
+        producto: `Línea ${get("Line No.")||"—"}`,
+        obra:     String(get("Hoja de Ruta")||""),
+        proveedor:String(get("Nombre Proveedor")||get("Proveedor")||""),
+        equipo:   String(get("Equipo de Retiro")||""),
+        guia:     String(get("Guia de Despacho")||""),
+        nRecep:   String(get("N° Recepcion")||""),
+        etapaIdx,
+        eta:      formatFecha((nuevaFecha&&nuevaFecha!=="S/F")?nuevaFecha:fechaEntrega),
+        detalle:  detalleParts.join(" · ")||"Sin comentarios",
+        estatusChofer: String(estatusChofer),
+        estatusAsig:   String(estatusAsig),
+      };
+    }).filter(Boolean);
+  }
   return rows.map(r=>{
-    const etapaIdx = STAGES.findIndex(s=>s.toLowerCase()===String(r.etapa||"").trim().toLowerCase());
+    const etapaIdx=STAGES.findIndex(s=>s.toLowerCase()===String(r.etapa||"").trim().toLowerCase());
     return {
-      oc:       r.oc       || r.OC       || "",
-      producto: r.producto || r.Producto || "",
-      obra:     r.obra     || r.Obra     || "",
-      proveedor:r.proveedor|| r.Proveedor|| "",
-      etapaIdx: etapaIdx >= 0 ? etapaIdx : 0,
-      eta:      r.eta      || r.ETA      || "",
-      detalle:  r.detalle  || r.Detalle  || r.comentario || r.Comentario || ""
+      oc:r.oc||r.OC||"", producto:r.producto||r.Producto||"", obra:r.obra||r.Obra||"",
+      proveedor:r.proveedor||r.Proveedor||"",
+      etapaIdx:etapaIdx>=0?etapaIdx:0,
+      eta:formatFecha(r.eta||r.ETA||""),
+      detalle:r.detalle||r.Detalle||r.comentario||r.Comentario||""
     };
-  }).filter(r => r.etapaIdx < STAGES.length - 1);
+  }).filter(r=>r.etapaIdx<STAGES.length-1);
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────
@@ -429,18 +483,24 @@ function render(){
     const detailTr = document.createElement('tr');
     detailTr.className = "detail-row";
     detailTr.style.display = "none";
-    detailTr.innerHTML = `<td colspan="5"><div class="detail-box">
+    const extraFields = p.equipo ? `
+      <div class="dblock"><div class="dt">Equipo retiro</div><div class="dv">${p.equipo}</div></div>
+      <div class="dblock"><div class="dt">Guía despacho</div><div class="dv">${p.guia||'—'}</div></div>
+      <div class="dblock"><div class="dt">N° Recepción</div><div class="dv">${p.nRecep||'—'}</div></div>
+    ` : '';
+    detailTr.innerHTML = `<td colspan="5"><div class="detail-box" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
       <div class="dblock">
         <div class="dt">Etapa actual</div>
         <div class="dv accent">${STAGES[p.etapaIdx]}</div>
       </div>
       <div class="dblock">
-        <div class="dt">ETA / Estado</div>
-        <div class="dv">${p.eta || '—'} ${isLate ? '<span class="badge late">Atrasado</span>' : p.eta ? '<span class="badge ok">En plazo</span>' : ''}</div>
+        <div class="dt">ETA</div>
+        <div class="dv">${p.eta||'—'} ${isLate?'<span class="badge late">Atrasado</span>':p.eta?'<span class="badge ok">En plazo</span>':''}</div>
       </div>
-      <div class="dblock">
-        <div class="dt">Detalle</div>
-        <div class="dv">${p.detalle || 'Sin detalle cargado.'}</div>
+      ${extraFields}
+      <div class="dblock" style="grid-column:1/-1">
+        <div class="dt">Comentario / Motivo</div>
+        <div class="dv">${p.detalle||'Sin detalle.'}</div>
       </div>
     </div></td>`;
     tbody.appendChild(detailTr);
@@ -526,7 +586,7 @@ document.getElementById('fileInput').addEventListener('change', e=>{
         const data = JSON.parse(ev.target.result);
         pedidos = normalize(Array.isArray(data) ? data : (data.pedidos||[]));
       } else {
-        const wb = XLSX.read(ev.target.result,{type:'binary'});
+        const wb = XLSX.read(ev.target.result,{type:"binary", cellDates:true});
         const ws = wb.Sheets[wb.SheetNames[0]];
         pedidos = normalize(XLSX.utils.sheet_to_json(ws));
       }
