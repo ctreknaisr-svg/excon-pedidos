@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard OC — EXCON</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#1a1a1a;--bg2:#222;--card:#2a2a2a;--border:#3d3d3d;
+  --text:#f0f0f0;--muted:#8c8c8c;--accent:#e8621a;
+  --red:#e0654f;--green:#2f9e5a;--amber:#c8a020;--blue:#3a7bd5;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:Segoe UI,Arial,sans-serif;min-height:100vh;}
+
+/* MODAL LOGIN */
+#loginModal{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:999;}
+.modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:36px;max-width:460px;width:90%;}
+.modal-box h2{font-size:18px;font-weight:700;margin-bottom:6px;}
+.modal-box .sub{color:var(--muted);font-size:13px;margin-bottom:24px;}
+.modal-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;display:block;}
+.modal-select{width:100%;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px;font-size:14px;margin-bottom:16px;}
+.btn-confirm{width:100%;background:var(--accent);color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;}
+.btn-confirm:hover{opacity:.9;}
+.logo-modal{display:flex;align-items:center;gap:6px;font-size:20px;font-weight:800;margin-bottom:20px;}
+.blocks{display:flex;gap:2px;margin-left:3px;}
+.blocks span{width:7px;height:7px;border-radius:1px;}
+.b1{background:#666}.b2{background:#888}.b3{background:#aaa}.b4{background:#e8621a}
+
+/* HEADER */
+header{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.header-left{display:flex;align-items:center;gap:14px;}
+.logo{display:flex;align-items:center;gap:6px;font-size:17px;font-weight:800;}
+.hdivider{width:1px;height:26px;background:var(--border);}
+.htitle{font-size:13px;color:var(--muted);}
+.header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.badge-user{background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--accent);cursor:pointer;}
+.btn-sm{background:transparent;border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:12px;}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent);}
+.badge-src{font-size:11px;color:var(--muted);padding:4px 10px;background:var(--bg);border:1px solid var(--border);border-radius:20px;}
+
+/* MAIN */
+main{padding:20px 24px;}
+
+/* VISTA RESUMEN */
+#vistaResumen{}
+.kpi-row{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 16px;min-width:100px;flex:1;}
+.kpi .n{font-size:24px;font-weight:700;color:var(--accent);}
+.kpi.red .n{color:var(--red);}
+.kpi.amber .n{color:var(--amber);}
+.kpi.green .n{color:var(--green);}
+.kpi .l{font-size:11px;color:var(--muted);margin-top:2px;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+thead th{text-align:center;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:10px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
+thead th:first-child{text-align:left;}
+tbody td{padding:12px 10px;border-bottom:1px solid var(--border);font-size:13px;text-align:center;vertical-align:middle;}
+tbody td:first-child{text-align:left;font-weight:600;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr.obra-row{cursor:pointer;}
+tbody tr.obra-row:hover{background:var(--bg2);}
+tfoot td{padding:10px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);text-align:center;font-weight:600;}
+tfoot td:first-child{text-align:left;color:var(--text);}
+.pill{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;}
+.pill.red{background:rgba(224,101,79,.15);color:var(--red);}
+.pill.green{background:rgba(47,158,90,.15);color:var(--green);}
+.pill.amber{background:rgba(200,160,32,.15);color:var(--amber);}
+.pill.blue{background:rgba(58,123,213,.15);color:var(--blue);}
+.pill.gray{background:rgba(140,140,140,.15);color:var(--muted);}
+
+/* VISTA DETALLE */
+#vistaDetalle{display:none;}
+.back-btn{display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:16px;background:none;border:none;padding:0;}
+.back-btn:hover{color:var(--accent);}
+.detalle-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.detalle-header h2{font-size:16px;font-weight:700;}
+.search-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.search-bar input{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:12px;min-width:180px;}
+.filtros{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.filtro-pill{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--muted);}
+.filtro-pill.active{border-color:var(--accent);color:var(--accent);}
+.oc-table thead th{text-align:left;}
+.oc-table tbody td{text-align:left;}
+.oc-table tbody tr.oc-row{cursor:pointer;}
+.oc-table tbody tr.oc-row:hover{background:var(--bg2);}
+tr.detail-row td{background:var(--bg2);padding:0;}
+.detail-box{padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;}
+.dblock .dt{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;}
+.dblock .dv{font-size:13px;line-height:1.4;}
+.dblock .dv.accent{color:var(--accent);font-weight:600;}
+.urgente{color:var(--red);font-weight:700;}
+.empty{text-align:center;color:var(--muted);padding:50px;font-size:14px;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginModal">
+  <div class="modal-box">
+    <div class="logo-modal">EXCON<div class="blocks"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span></div></div>
+    <h2>Dashboard de Órdenes de Compra</h2>
+    <p class="sub">Selecciona tu obra para ver el estado de tus pedidos</p>
+    <label class="modal-label">Perfil de acceso</label>
+    <select class="modal-select" id="perfilSelect">
+      <option value="">— selecciona —</option>
+      <option value="admin">🔑 Administrador (todas las obras)</option>
+    </select>
+    <label class="modal-label" id="obraLabel" style="display:none">Obra</label>
+    <select class="modal-select" id="obraSelect" style="display:none">
+      <option value="">— selecciona tu obra —</option>
+    </select>
+    <button class="btn-confirm" onclick="confirmarAcceso()">Ingresar</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-left">
+    <div class="logo">EXCON<div class="blocks"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span></div></div>
+    <div class="hdivider"></div>
+    <div class="htitle">Órdenes de Compra</div>
+  </div>
+  <div class="header-right">
+    <span class="badge-src" id="srcBadge">cargando…</span>
+    <button class="btn-sm" onclick="document.getElementById('loginModal').style.display='flex'">↩ cambiar perfil</button>
+    <button class="btn-sm" onclick="cargarDatos()">↻ actualizar</button>
+  </div>
+</header>
+
+<main>
+  <!-- VISTA RESUMEN -->
+  <div id="vistaResumen">
+    <div class="kpi-row" id="kpiRow"></div>
+    <div class="table-wrap">
+      <table id="tablaResumen">
+        <thead>
+          <tr>
+            <th style="text-align:left">Obra</th>
+            <th>Total OC</th>
+            <th>Desp. obra</th>
+            <th>Desp. Lo Pinto</th>
+            <th>Retira obra</th>
+            <th>Retira bodega</th>
+            <th>Urgentes</th>
+            <th>En retiro</th>
+            <th>En recepción</th>
+            <th style="color:var(--red)">Sin retiro</th>
+            <th style="color:var(--green)">Con retiro</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyResumen"></tbody>
+        <tfoot id="tfootResumen"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- VISTA DETALLE OBRA -->
+  <div id="vistaDetalle">
+    <button class="back-btn" onclick="volverResumen()">← volver al resumen</button>
+    <div class="detalle-header">
+      <div>
+        <h2 id="obraTitulo"></h2>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px" id="obraSubtitulo"></div>
+      </div>
+      <div class="search-bar">
+        <input type="text" id="searchOC" placeholder="Buscar OC, proveedor, descripción…" oninput="renderDetalle()">
+      </div>
+    </div>
+    <div class="filtros" id="filtrosPills"></div>
+    <div class="table-wrap">
+      <table class="oc-table">
+        <thead>
+          <tr>
+            <th>OC</th>
+            <th>Descripción</th>
+            <th>Proveedor</th>
+            <th>Método</th>
+            <th>F. Prometida</th>
+            <th>Etapa</th>
+            <th>Retiro</th>
+            <th>Prioridad</th>
+            <th>Cumplimiento</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyDetalle"></tbody>
+      </table>
+      <div class="empty" id="emptyDetalle" style="display:none">No hay OC que coincidan con los filtros</div>
+    </div>
+  </div>
+</main>
+
+<script>
+// ── MAPA DE CLAVES CORTAS ────────────────────────────────────────
+const K = {
+  oc:"oc",req:"r",descripcion:"d",obra:"ob",proveedor:"pr",
+  metodo:"m",etapa:"e",prioridad:"p",fecha_oc:"fo",fecha_prometida:"fp",
+  fecha_recep:"fr",retiro:"rt",tiene_retiro:"tr",tipo_compra:"tc",
+  cumplimiento:"cu",monto:"mo",mes:"ms",departamento:"dp"
+};
+const g = (row,field) => row[K[field]] ?? "";
+
+let todos = [];
+let perfil = null;
+let obraActual = null;
+let filtroEtapa = null;
+
+// ── CARGA DATOS ──────────────────────────────────────────────────
+async function cargarDatos(){
+  setSrc("cargando…","var(--muted)");
+  try{
+    const res = await fetch("pedidos.json?t="+Date.now());
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    todos = await res.json();
+    poblarObras();
+    const hora = new Date().toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"});
+    setSrc("actualizado "+hora,"var(--accent)");
+    if(perfil) renderResumen();
+  }catch(e){
+    setSrc("⚠ no se encontró pedidos.json","var(--red)");
+    console.error(e);
+  }
+}
+
+function setSrc(txt,color){
+  const b=document.getElementById("srcBadge");
+  b.textContent=txt; b.style.color=color;
+}
+
+// ── OBRAS ────────────────────────────────────────────────────────
+function poblarObras(){
+  const obras=[...new Set(todos.map(r=>g(r,"obra")).filter(Boolean))].sort();
+  const sel=document.getElementById("obraSelect");
+  sel.innerHTML='<option value="">— selecciona tu obra —</option>'+
+    obras.map(o=>`<option value="${o}">${o}</option>`).join("");
+  // agregar obras al select de perfil también
+  const ps=document.getElementById("perfilSelect");
+  // quitar obras anteriores
+  [...ps.options].filter(o=>o.dataset.tipo==="obra").forEach(o=>o.remove());
+  obras.forEach(o=>{
+    const opt=document.createElement("option");
+    opt.value="obra:"+o; opt.textContent="🏗 "+o; opt.dataset.tipo="obra";
+    ps.appendChild(opt);
+  });
+}
+
+document.getElementById("perfilSelect").addEventListener("change",function(){
+  const v=this.value;
+  const showObra = !v || v==="";
+  document.getElementById("obraLabel").style.display= v.startsWith("obra:")?"none":"none";
+  document.getElementById("obraSelect").style.display="none";
+});
+
+// ── LOGIN ────────────────────────────────────────────────────────
+function confirmarAcceso(){
+  const val=document.getElementById("perfilSelect").value;
+  if(!val){alert("Selecciona un perfil");return;}
+  if(val==="admin"){
+    perfil="admin"; obraActual=null;
+  } else if(val.startsWith("obra:")){
+    perfil="obra"; obraActual=val.replace("obra:","");
+  }
+  document.getElementById("loginModal").style.display="none";
+  renderResumen();
+}
+
+// ── DATOS FILTRADOS POR PERFIL ───────────────────────────────────
+function datosPerfil(){
+  if(perfil==="admin") return todos;
+  return todos.filter(r=>g(r,"obra")===obraActual);
+}
+
+// ── RESUMEN ──────────────────────────────────────────────────────
+function renderResumen(){
+  document.getElementById("vistaResumen").style.display="block";
+  document.getElementById("vistaDetalle").style.display="none";
+
+  const data = datosPerfil();
+  const obraMap = {};
+  data.forEach(r=>{
+    const ob=g(r,"obra")||"Sin obra";
+    if(!obraMap[ob]) obraMap[ob]={total:0,desp_obra:0,desp_pinto:0,retira_obra:0,retira_bodega:0,urgentes:0,en_retiro:0,en_recepcion:0,sin_retiro:0,con_retiro:0};
+    const o=obraMap[ob];
+    o.total++;
+    const m=g(r,"metodo");
+    if(m==="Despacho a obra") o.desp_obra++;
+    else if(m==="Despacho a Bodega Central") o.desp_pinto++;
+    else if(m==="Retira la Obra") o.retira_obra++;
+    else if(m==="Retira Bodega Central") o.retira_bodega++;
+    if(g(r,"prioridad")==="Urgente") o.urgentes++;
+    const e=g(r,"etapa");
+    if(e==="En retiro") o.en_retiro++;
+    if(e==="En recepción") o.en_recepcion++;
+    const rt=g(r,"retiro");
+    if(rt==="Sin retiro") o.sin_retiro++;
+    else if(rt==="Retirada") o.con_retiro++;
+  });
+
+  // KPIs
+  const urgTotal=data.filter(r=>g(r,"prioridad")==="Urgente").length;
+  const sinRet=data.filter(r=>g(r,"retiro")==="Sin retiro").length;
+  const obras=Object.keys(obraMap).length;
+  document.getElementById("kpiRow").innerHTML=`
+    <div class="kpi"><div class="n">${data.length}</div><div class="l">OC vigentes</div></div>
+    <div class="kpi red"><div class="n">${urgTotal}</div><div class="l">urgentes</div></div>
+    <div class="kpi amber"><div class="n">${sinRet}</div><div class="l">sin retiro</div></div>
+    <div class="kpi green"><div class="n">${obras}</div><div class="l">obras activas</div></div>
+  `;
+
+  // tabla resumen
+  const tbody=document.getElementById("tbodyResumen");
+  tbody.innerHTML="";
+  const tot={total:0,desp_obra:0,desp_pinto:0,retira_obra:0,retira_bodega:0,urgentes:0,en_retiro:0,en_recepcion:0,sin_retiro:0,con_retiro:0};
+  Object.entries(obraMap).sort((a,b)=>b[1].total-a[1].total).forEach(([obra,o])=>{
+    Object.keys(tot).forEach(k=>tot[k]+=o[k]);
+    const tr=document.createElement("tr");
+    tr.className="obra-row";
+    tr.onclick=()=>abrirDetalle(obra);
+    tr.innerHTML=`
+      <td>${obra}</td>
+      <td><strong>${o.total}</strong></td>
+      <td>${o.desp_obra||"—"}</td>
+      <td>${o.desp_pinto||"—"}</td>
+      <td>${o.retira_obra||"—"}</td>
+      <td>${o.retira_bodega||"—"}</td>
+      <td>${o.urgentes ? `<span class="pill red">${o.urgentes}</span>` : "—"}</td>
+      <td>${o.en_retiro||"—"}</td>
+      <td>${o.en_recepcion||"—"}</td>
+      <td>${o.sin_retiro ? `<span class="pill red">${o.sin_retiro}</span>` : "—"}</td>
+      <td>${o.con_retiro ? `<span class="pill green">${o.con_retiro}</span>` : "—"}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById("tfootResumen").innerHTML=`<tr>
+    <td>Total</td>
+    <td><strong>${tot.total}</strong></td>
+    <td>${tot.desp_obra}</td>
+    <td>${tot.desp_pinto}</td>
+    <td>${tot.retira_obra}</td>
+    <td>${tot.retira_bodega}</td>
+    <td>${tot.urgentes}</td>
+    <td>${tot.en_retiro}</td>
+    <td>${tot.en_recepcion}</td>
+    <td style="color:var(--red);font-weight:700">${tot.sin_retiro}</td>
+    <td style="color:var(--green);font-weight:700">${tot.con_retiro}</td>
+  </tr>`;
+}
+
+// ── DETALLE OBRA ─────────────────────────────────────────────────
+function abrirDetalle(obra){
+  obraActual=obra;
+  filtroEtapa=null;
+  document.getElementById("vistaResumen").style.display="none";
+  document.getElementById("vistaDetalle").style.display="block";
+  document.getElementById("searchOC").value="";
+  document.getElementById("obraTitulo").textContent=obra;
+  renderDetalle();
+}
+
+function volverResumen(){
+  obraActual = perfil==="admin" ? null : obraActual;
+  document.getElementById("vistaDetalle").style.display="none";
+  document.getElementById("vistaResumen").style.display="block";
+  if(perfil==="admin") renderResumen();
+}
+
+function renderDetalle(){
+  const q=document.getElementById("searchOC").value.toLowerCase();
+  const data=todos.filter(r=>g(r,"obra")===obraActual);
+
+  // pills de filtro etapa
+  const etapas=[...new Set(data.map(r=>g(r,"etapa")).filter(Boolean))];
+  document.getElementById("filtrosPills").innerHTML=
+    `<div class="filtro-pill ${filtroEtapa===null?'active':''}" onclick="setFiltro(null)">Todas (${data.length})</div>`+
+    etapas.map(e=>{
+      const n=data.filter(r=>g(r,"etapa")===e).length;
+      return `<div class="filtro-pill ${filtroEtapa===e?'active':''}" onclick="setFiltro('${e}')">${e} (${n})</div>`;
+    }).join("");
+
+  document.getElementById("obraSubtitulo").textContent=
+    `${data.length} OC vigentes · ${data.filter(r=>g(r,"prioridad")==="Urgente").length} urgentes`;
+
+  let filtered=data;
+  if(filtroEtapa) filtered=filtered.filter(r=>g(r,"etapa")===filtroEtapa);
+  if(q) filtered=filtered.filter(r=>[g(r,"oc"),g(r,"descripcion"),g(r,"proveedor")].join(" ").toLowerCase().includes(q));
+
+  const tbody=document.getElementById("tbodyDetalle");
+  tbody.innerHTML="";
+  document.getElementById("emptyDetalle").style.display=filtered.length?"none":"block";
+
+  const today=new Date();
+  filtered.forEach(r=>{
+    const isUrgente=g(r,"prioridad")==="Urgente";
+    const fpStr=g(r,"fecha_prometida");
+    let isVencida=false;
+    if(fpStr){
+      const [d,m,y]=fpStr.split("/");
+      isVencida=new Date(y,m-1,d)<today;
+    }
+    const etapa=g(r,"etapa");
+    const retiro=g(r,"retiro");
+    const cumple=g(r,"cumplimiento");
+
+    const etapaColor=etapa==="En retiro"?"amber":etapa==="En recepción"?"blue":"gray";
+    const retiroColor=retiro==="Retirada"?"green":"red";
+    const cumpleColor=cumple==="Cumple"?"green":"red";
+
+    const tr=document.createElement("tr");
+    tr.className="oc-row";
+    tr.innerHTML=`
+      <td><strong ${isUrgente?'class="urgente"':''}>${g(r,"oc")}</strong></td>
+      <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g(r,"descripcion")}</td>
+      <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px">${g(r,"proveedor")}</td>
+      <td style="font-size:11px">${g(r,"metodo")||"—"}</td>
+      <td style="font-size:12px ${isVencida?';color:var(--red);font-weight:600':''}">${fpStr||"—"}</td>
+      <td><span class="pill ${etapaColor}">${etapa||"—"}</span></td>
+      <td><span class="pill ${retiroColor}">${retiro||"—"}</span></td>
+      <td>${isUrgente?'<span class="pill red">Urgente</span>':'<span class="pill gray">Normal</span>'}</td>
+      <td><span class="pill ${cumpleColor}">${cumple||"—"}</span></td>
+    `;
+    tbody.appendChild(tr);
+
+    // fila detalle expandible
+    const dtr=document.createElement("tr");
+    dtr.className="detail-row";
+    dtr.style.display="none";
+    dtr.innerHTML=`<td colspan="9"><div class="detail-box">
+      <div class="dblock"><div class="dt">N° OC</div><div class="dv accent">${g(r,"oc")}</div></div>
+      <div class="dblock"><div class="dt">Req</div><div class="dv">${g(r,"req")}</div></div>
+      <div class="dblock"><div class="dt">Fecha OC</div><div class="dv">${g(r,"fecha_oc")||"—"}</div></div>
+      <div class="dblock"><div class="dt">F. prometida</div><div class="dv ${isVencida?'urgente':''}">${fpStr||"—"}${isVencida?" · vencida":""}</div></div>
+      <div class="dblock"><div class="dt">F. recepción</div><div class="dv">${g(r,"fecha_recep")||"—"}</div></div>
+      <div class="dblock"><div class="dt">Tipo compra</div><div class="dv">${g(r,"tipo_compra")||"—"}</div></div>
+      <div class="dblock"><div class="dt">Monto PM</div><div class="dv">${g(r,"monto")?'$'+Number(g(r,"monto")).toLocaleString("es-CL"):"—"}</div></div>
+      <div class="dblock"><div class="dt">Mes</div><div class="dv">${g(r,"mes")||"—"}</div></div>
+      <div class="dblock" style="grid-column:1/-1"><div class="dt">Descripción</div><div class="dv">${g(r,"descripcion")||"—"}</div></div>
+    </div></td>`;
+    tbody.appendChild(dtr);
+
+    tr.addEventListener("click",()=>{
+      document.querySelectorAll(".detail-row").forEach(x=>x.style.display="none");
+      dtr.style.display=dtr.style.display==="none"?"table-row":"none";
+    });
+  });
+}
+
+function setFiltro(e){
+  filtroEtapa=e;
+  renderDetalle();
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+cargarDatos();
+</script>
+</body>
+</html>
