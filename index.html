@@ -235,7 +235,7 @@ tr.detail-row td{background:var(--bg2);padding:0;border-bottom:1px solid var(--b
 // ══════════════════════════════════════════════════════════════════
 // CONFIGURACIÓN — ruta al archivo Excel con los datos
 // Dejar como "pedidos.xlsx" si está en la misma carpeta que index.html
-const DATA_FILE = "pedidos.xlsx";
+const DATA_FILE = "pedidos.json";
 // ══════════════════════════════════════════════════════════════════
 
 const STAGES = ["OC","Aprobada","Despachada","En tránsito","Llegó a obra","Recepción conforme"];
@@ -245,24 +245,26 @@ let currentObra = null;
 let activeStageFilter = null;
 let dataSource = "manual";
 
-// ── CARGA DESDE EXCEL (pedidos.xlsx) ─────────────────────────────
+// ── CARGA DESDE pedidos.json ─────────────────────────────────────
 async function fetchSheet(){
   setSourceBadge("cargando…", "#888");
   try{
     const res = await fetch(DATA_FILE + "?t=" + Date.now());
     if(!res.ok) throw new Error("HTTP " + res.status);
-    const buf = await res.arrayBuffer();
-    const wb = XLSX.read(buf, { type: "array", cellDates: true });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws);
-    pedidos = normalize(rows);
-    dataSource = "sheet";
+    const data = await res.json();
+    const rows = Array.isArray(data) ? data : (data.pedidos || []);
+    // el json ya viene normalizado desde el conversor, mapeamos etapa a índice
+    pedidos = rows.map(r=>{
+      const etapaIdx = STAGES.findIndex(s=>s.toLowerCase()===String(r.etapa||"").trim().toLowerCase());
+      return {...r, etapaIdx: etapaIdx >= 0 ? etapaIdx : 3};
+    }).filter(r => r.etapaIdx < STAGES.length - 1);
+    dataSource = "json";
     const hora = new Date().toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"});
-    setSourceBadge(DATA_FILE + " · actualizado " + hora, "var(--accent)");
+    setSourceBadge("pedidos.json · actualizado " + hora, "var(--accent)");
     updateObraSelect();
     render();
   } catch(e){
-    setSourceBadge("⚠ No se encontró " + DATA_FILE + " — usa importar archivo", "var(--amber)");
+    setSourceBadge("⚠ No se encontró pedidos.json", "var(--amber)");
     console.error(e);
     render();
   }
