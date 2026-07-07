@@ -639,12 +639,7 @@ function downloadTemplate(fmt){
 
 // ── INIT ─────────────────────────────────────────────────────────
 (async function init(){
-  if(SHEET_CSV_URL){
-    await fetchSheet();
-  } else {
-    setSourceBadge("carga manual · importa un archivo", "var(--muted)");
-    render();
-  }
+  await fetchSheet();
 })();
 </script>
 </body>
