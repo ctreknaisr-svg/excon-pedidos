@@ -601,23 +601,9 @@ document.getElementById('fileInput').addEventListener('change', e=>{
 });
 
 // ── PLANTILLA ─────────────────────────────────────────────────────────
-function toggleTemplateMenu(){
-  const m = document.getElementById('templateMenu');
-  const btn = document.getElementById('btnPlantilla');
-  m.style.display = m.style.display === 'none' ? 'block' : 'none';
-  if(m.style.display === 'block'){
-    const r = btn.getBoundingClientRect();
-    m.style.top = (r.bottom + window.scrollY + 4) + 'px';
-    m.style.left = r.left + 'px';
-  }
-}
-document.addEventListener('click', e=>{
-  if(!e.target.closest('#btnPlantilla') && !e.target.closest('#templateMenu'))
-    document.getElementById('templateMenu').style.display = 'none';
-});
+// botones de plantilla removidos (vista solo lectura)
 
 function downloadTemplate(fmt){
-  document.getElementById('templateMenu').style.display = 'none';
   const sample = [
     {oc:"OC-2026-014",producto:"Antena Starlink Gen3",obra:"El Abra",proveedor:"Starlink Chile",etapa:"En tránsito",eta:"2026-06-25",detalle:"Despacho confirmado por courier, llega a bodega central antes de subir a faena"},
     {oc:"OC-2026-015",producto:"Fortinet FG-100F + licencia",obra:"Faena Sur",proveedor:"Fortinet Distribuidor",etapa:"Despachada",eta:"2026-06-30",detalle:"Pendiente factura para retiro en bodega proveedor"},
