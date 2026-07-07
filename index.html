@@ -1,665 +1,74 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<title>Avance de Pedidos - EXCON</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<style>
-:root{
-  --bg:#1a1a1a;--bg2:#222222;--card:#2a2a2a;--border:#3d3d3d;
-  --green:#b84a14;--green2:#e8621a;--text:#f0f0f0;--muted:#8c8c8c;
-  --accent:#e8621a;--red:#e0654f;--amber:#c8a020;
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:Segoe UI,Arial,sans-serif;min-height:100vh;}
-
-/* MODAL ROL */
-#roleModal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:999;}
-.modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:40px;max-width:440px;width:90%;text-align:center;}
-.modal-box h2{font-size:20px;margin-bottom:8px;}
-.modal-box p{color:var(--muted);font-size:13px;margin-bottom:28px;}
-.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
-.role-btn{background:var(--bg2);border:1.5px solid var(--border);color:var(--text);border-radius:10px;padding:18px 12px;cursor:pointer;transition:all .15s;}
-.role-btn:hover,.role-btn.active{border-color:var(--accent);color:var(--accent);}
-.role-btn .icon{font-size:24px;margin-bottom:6px;}
-.role-btn .label{font-size:13px;font-weight:600;}
-.role-btn .sub{font-size:11px;color:var(--muted);margin-top:3px;}
-.obra-select{width:100%;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none;}
-.btn-confirm{background:var(--green);color:#fff;border:none;padding:12px 28px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;width:100%;}
-.btn-confirm:hover{background:var(--green2);}
-
-/* HEADER */
-header{padding:16px 28px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;background:var(--bg2);}
-.header-left{display:flex;align-items:center;gap:16px;}
-.header-left .logo{display:flex;align-items:center;gap:6px;font-size:20px;font-weight:800;letter-spacing:-.5px;color:#f0f0f0;}
-.header-left .logo .ex{color:#f0f0f0;}
-.header-left .logo .blocks{display:flex;gap:2px;margin-left:3px;}
-.header-left .logo .blocks span{width:8px;height:8px;border-radius:1px;}
-.header-left .logo .b1{background:#666;}
-.header-left .logo .b2{background:#888;}
-.header-left .logo .b3{background:#aaa;}
-.header-left .logo .b4{background:#e8621a;}
-.header-left .divider{width:1px;height:32px;background:var(--border);}
-.header-left .titles h1{font-size:15px;font-weight:600;color:var(--text);}
-.header-left .titles .sub{color:var(--muted);font-size:11px;margin-top:2px;}
-.role-badge{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--accent);cursor:pointer;}
-.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.btn{background:var(--green);color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:500;}
-.btn:hover{background:var(--green2);}
-.btn.sec{background:transparent;border:1px solid var(--border);color:var(--text);}
-input[type=file]{display:none;}
-input[type=text]{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:12px;min-width:180px;}
-
-/* TABS */
-.tabs{display:flex;gap:4px;padding:16px 28px 0;border-bottom:1px solid var(--border);}
-.tab{padding:8px 18px;border-radius:8px 8px 0 0;cursor:pointer;font-size:13px;color:var(--muted);border:1px solid transparent;border-bottom:none;margin-bottom:-1px;}
-.tab.active{background:var(--card);border-color:var(--border);color:var(--text);font-weight:600;}
-
-/* MAIN */
-main{padding:22px 28px;}
-
-/* KPI ROW */
-.kpi-row{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
-.kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;min-width:110px;flex:1;}
-.kpi .n{font-size:26px;font-weight:700;color:var(--accent);}
-.kpi .l{font-size:11px;color:var(--muted);margin-top:2px;}
-.kpi.red .n{color:var(--red);}
-.kpi.amber .n{color:var(--amber);}
-
-/* DISTRIBUCIÓN OBRA */
-.dist-section{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:20px;}
-.dist-section h3{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
-.obra-bars{display:flex;flex-direction:column;gap:10px;}
-.obra-bar-row{display:flex;align-items:center;gap:10px;cursor:pointer;}
-.obra-bar-row:hover .obra-name{color:var(--accent);}
-.obra-name{font-size:13px;width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.bar-track{flex:1;height:10px;background:var(--bg2);border-radius:5px;overflow:hidden;}
-.bar-fill{height:100%;background:var(--green2);border-radius:5px;transition:width .4s;}
-.bar-fill.has-late{background:var(--red);}
-.obra-count{font-size:12px;color:var(--muted);width:24px;text-align:right;}
-
-/* ETAPA DIST */
-.stage-dist{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
-.stage-pill{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;}
-.stage-pill .sp-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
-.stage-pill.active{border-color:var(--accent);color:var(--accent);}
-.stage-pill.active .sp-dot{background:var(--accent);}
-
-/* TABLA */
-.table-wrap{overflow-x:auto;}
-table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;min-width:700px;}
-thead th{text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:10px 14px;border-bottom:1px solid var(--border);}
-tbody td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;}
-tbody tr:last-child td{border-bottom:none;}
-tbody tr.data-row:hover{background:var(--bg2);cursor:pointer;}
-.pid{font-weight:700;color:var(--accent);}
-.psub{color:var(--muted);font-size:11px;margin-top:2px;}
-.stages{display:flex;align-items:center;gap:3px;}
-.stage{flex:1;text-align:center;}
-.dot{width:12px;height:12px;border-radius:50%;background:var(--bg2);border:2px solid var(--border);margin:0 auto 3px;}
-.dot.done{background:var(--green2);border-color:var(--green2);}
-.dot.current{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 3px rgba(232,98,26,.2);}
-.line{height:2px;background:var(--border);flex:0.3;margin-top:-14px;}
-.line.done{background:var(--green2);}
-.stagelabel{font-size:8px;color:var(--muted);white-space:nowrap;}
-.eta{font-size:11px;color:var(--muted);}
-.eta.late{color:var(--red);font-weight:600;}
-.badge{display:inline-block;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;}
-.badge.late{background:rgba(224,101,79,.15);color:var(--red);}
-.badge.ok{background:rgba(232,98,26,.15);color:var(--accent);}
-
-/* DETALLE ROW */
-tr.detail-row td{background:var(--bg2);padding:0;border-bottom:1px solid var(--border);}
-.detail-box{padding:16px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
-.detail-box .dblock .dt{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
-.detail-box .dblock .dv{font-size:13px;line-height:1.5;}
-.detail-box .dblock .dv.accent{color:var(--accent);font-weight:600;}
-
-/* EMPTY */
-.empty{text-align:center;color:var(--muted);padding:60px;font-size:14px;}
-</style>
-</head>
-<body>
-
-<!-- MODAL ROL -->
-<div id="roleModal">
-  <div class="modal-box">
-    <h2>¿Quién eres?</h2>
-    <p>Selecciona tu rol para ver la vista personalizada</p>
-    <div class="role-grid">
-      <div class="role-btn" onclick="selectRole('obra')">
-        <div class="icon">🏗️</div>
-        <div class="label">Obra / Terreno</div>
-        <div class="sub">Ve tus OC por faena</div>
-      </div>
-      <div class="role-btn" onclick="selectRole('compras')">
-        <div class="icon">🛒</div>
-        <div class="label">Compras / TC</div>
-        <div class="sub">Todas las OC activas</div>
-      </div>
-      <div class="role-btn" onclick="selectRole('ti')">
-        <div class="icon">💻</div>
-        <div class="label">TI</div>
-        <div class="sub">Pendientes de activar</div>
-      </div>
-      <div class="role-btn" onclick="selectRole('contabilidad')">
-        <div class="icon">📊</div>
-        <div class="label">Contabilidad</div>
-        <div class="sub">Pendientes de neteo</div>
-      </div>
-    </div>
-    <select class="obra-select" id="obraSelect">
-      <option value="">— selecciona tu obra —</option>
-    </select>
-    <button class="btn-confirm" onclick="confirmRole()">Ingresar</button>
-  </div>
-</div>
-
-<!-- HEADER -->
-<header>
-  <div class="header-left">
-    <div class="logo">
-      <span class="ex">EXCON</span>
-      <div class="blocks">
-        <span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span>
-      </div>
-    </div>
-    <div class="divider"></div>
-    <div class="titles">
-      <h1>Avance de Pedidos</h1>
-      <div class="sub" id="headerSub">OC → Recepción conforme · pedidos en tránsito</div>
-    </div>
-  </div>
-  <div class="controls">
-    <span class="role-badge" onclick="resetRole()" id="roleBadge">— rol —</span>
-    <span id="sourceBadge" style="font-size:11px;color:var(--muted);padding:4px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;">sin datos</span>
-    <button class="btn sec" onclick="fetchSheet()" title="Recargar desde Google Sheets" style="padding:8px 10px;">↻</button>
-    <input type="text" id="search" placeholder="Buscar OC, producto, obra...">
-    <input type="file" id="fileInput" accept=".json,.xlsx,.xls,.csv" style="display:none">
-  </div>
-</header>
-
-<!-- TABS -->
-<div class="tabs">
-  <div class="tab active" onclick="switchTab('lista',this)">Lista de pedidos</div>
-  <div class="tab" onclick="switchTab('stats',this)">Estadísticas</div>
-</div>
-
-<main>
-
-  <!-- TAB LISTA -->
-  <div id="tab-lista">
-    <!-- KPIs -->
-    <div class="kpi-row" id="kpiRow"></div>
-
-    <!-- Filtros etapa -->
-    <div class="stage-dist" id="stagePills"></div>
-
-    <!-- Tabla -->
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>OC / Producto</th>
-            <th>Obra</th>
-            <th>Proveedor</th>
-            <th>Progreso</th>
-            <th>Estado / ETA</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-      <div class="empty" id="emptyMsg" style="display:none">No hay pedidos para mostrar. Importa un archivo Excel o JSON.</div>
-    </div>
-  </div>
-
-  <!-- TAB STATS -->
-  <div id="tab-stats" style="display:none">
-    <div class="dist-section">
-      <h3>Distribución por obra</h3>
-      <div class="obra-bars" id="obraBars"></div>
-    </div>
-    <div class="dist-section">
-      <h3>Distribución por etapa</h3>
-      <div class="obra-bars" id="stageBars"></div>
-    </div>
-    <div class="dist-section">
-      <h3>OC atrasadas por obra</h3>
-      <div class="obra-bars" id="lateBars"></div>
-    </div>
-  </div>
-
-</main>
-
-<script>
-// ══════════════════════════════════════════════════════════════════
-// CONFIGURACIÓN — ruta al archivo Excel con los datos
-// Dejar como "pedidos.xlsx" si está en la misma carpeta que index.html
-const DATA_FILE = "pedidos.json";
-// ══════════════════════════════════════════════════════════════════
-
-const STAGES = ["OC","Aprobada","Despachada","En tránsito","Llegó a obra","Recepción conforme"];
-let pedidos = [];
-let currentRole = null;
-let currentObra = null;
-let activeStageFilter = null;
-let dataSource = "manual";
-
-// ── CARGA DESDE pedidos.json ─────────────────────────────────────
-async function fetchSheet(){
-  setSourceBadge("cargando…", "#888");
-  try{
-    const res = await fetch(DATA_FILE + "?t=" + Date.now());
-    if(!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
-    const rows = Array.isArray(data) ? data : (data.pedidos||[]);
-    pedidos = rows.map(r=>{
-      const etapaIdx = STAGES.findIndex(s=>s.toLowerCase()===String(r.etapa||"").trim().toLowerCase());
-      return {...r, etapaIdx: etapaIdx>=0 ? etapaIdx : 3};
-    }).filter(r=>r.etapaIdx < STAGES.length-1);
-    const hora = new Date().toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"});
-    setSourceBadge("pedidos.json · " + hora, "var(--accent)");
-    updateObraSelect();
-    render();
-  } catch(e){
-    setSourceBadge("⚠ No se encontró pedidos.json", "var(--amber)");
-    console.error(e);
-    render();
+[
+  {
+    "oc": "OC358793",
+    "producto": "Línea 3",
+    "obra": "LA NEGRA",
+    "proveedor": "FINNING CHILE S.A.",
+    "equipo": "VM0484",
+    "guia": "",
+    "nRecep": "",
+    "etapa": "En tránsito",
+    "eta": "06/07/2026",
+    "detalle": "Fecha estimada 06.07"
+  },
+  {
+    "oc": "OC357154",
+    "producto": "Línea 34",
+    "obra": "MURO ZALDIVAR",
+    "proveedor": "FERRETERIA LA ESTRELLA S A",
+    "equipo": "FU-0028",
+    "guia": "",
+    "nRecep": "",
+    "etapa": "En tránsito",
+    "eta": "15/06/2026",
+    "detalle": "Camión"
+  },
+  {
+    "oc": "OC355800",
+    "producto": "Línea 1",
+    "obra": "LO PINTO",
+    "proveedor": "FINNING CHILE S.A.",
+    "equipo": "VM0527",
+    "guia": "na",
+    "nRecep": "",
+    "etapa": "En tránsito",
+    "eta": "07/07/2026",
+    "detalle": "Fecha estimada 07.07 · EN2"
+  },
+  {
+    "oc": "OC358498",
+    "producto": "Línea 15",
+    "obra": "LO PINTO",
+    "proveedor": "SERVILEK LIMITADA",
+    "equipo": "VM0527",
+    "guia": "na",
+    "nRecep": "",
+    "etapa": "En tránsito",
+    "eta": "03/07/2026",
+    "detalle": "Se le envia OC en PDF a proveedor, se reprograma · EN2"
+  },
+  {
+    "oc": "OC357389",
+    "producto": "Línea 2",
+    "obra": "TOCONAO",
+    "proveedor": "COM. E INDUSTRIAL NOVA SEGURIDAD LTDA.",
+    "equipo": "VM0484",
+    "guia": ",",
+    "nRecep": "",
+    "etapa": "En tránsito",
+    "eta": "23/06/2026",
+    "detalle": "stock quebrado · EN2"
+  },
+  {
+    "oc": "OC358949",
+    "producto": "Línea 14",
+    "obra": "TOCONAO",
+    "proveedor": "FINNING CHILE S.A.",
+    "equipo": "VM0484",
+    "guia": "",
+    "nRecep": "",
+    "etapa": "En tránsito",
+    "eta": "02/07/2026",
+    "detalle": "Se va a cancelar"
   }
-}
-
-function setSourceBadge(txt,color){
-  const b=document.getElementById("sourceBadge");
-  if(b){b.textContent=txt;b.style.color=color;}
-}
-
-function updateObraSelect(){
-  const obras=[...new Set(pedidos.map(p=>p.obra).filter(Boolean))];
-  const sel=document.getElementById("obraSelect");
-  sel.innerHTML="<option value=''>— selecciona tu obra —</option>"+obras.map(o=>`<option value="${o}">${o}</option>`).join("");
-}
-
-// ── ROLES ──────────────────────────────────────────────────────────────
-const ROLES = {
-  obra:         {label:"Obra / Terreno", icon:"🏗️"},
-  compras:      {label:"Compras / TC",   icon:"🛒"},
-  ti:           {label:"TI",             icon:"💻"},
-  contabilidad: {label:"Contabilidad",   icon:"📊"},
-};
-
-function selectRole(r){
-  currentRole = r;
-  document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('active'));
-  event.currentTarget.classList.add('active');
-  const sel = document.getElementById('obraSelect');
-  if(r === 'obra'){
-    const obras = [...new Set(pedidos.map(p=>p.obra).filter(Boolean))];
-    sel.innerHTML = '<option value="">— selecciona tu obra —</option>' +
-      obras.map(o=>`<option value="${o}">${o}</option>`).join('');
-    sel.style.display = 'block';
-  } else {
-    sel.style.display = 'none';
-    currentObra = null;
-  }
-}
-
-function confirmRole(){
-  if(!currentRole) return;
-  if(currentRole === 'obra'){
-    currentObra = document.getElementById('obraSelect').value || null;
-  }
-  document.getElementById('roleModal').style.display = 'none';
-  const r = ROLES[currentRole];
-  document.getElementById('roleBadge').textContent = r.icon + ' ' + r.label + (currentObra ? ' · '+currentObra : '') + ' ↩';
-  render();
-}
-
-function resetRole(){
-  // reload obras en select por si cambiaron
-  const obras = [...new Set(pedidos.map(p=>p.obra).filter(Boolean))];
-  const sel = document.getElementById('obraSelect');
-  sel.innerHTML = '<option value="">— selecciona tu obra —</option>' +
-    obras.map(o=>`<option value="${o}">${o}</option>`).join('');
-  document.getElementById('roleModal').style.display = 'flex';
-}
-
-// ── FILTRO POR ROL ────────────────────────────────────────────────────
-function applyRoleFilter(list){
-  if(!currentRole) return list;
-  if(currentRole === 'obra' && currentObra)
-    return list.filter(p => p.obra === currentObra);
-  if(currentRole === 'ti')
-    return list.filter(p => STAGES[p.etapaIdx] === 'Aprobada'); // pendientes de activar
-  if(currentRole === 'contabilidad')
-    return list.filter(p => STAGES[p.etapaIdx] === 'Llegó a obra'); // pendientes neteo
-  return list; // compras ve todo
-}
-
-// ── NORMALIZAR ────────────────────────────────────────────────────────
-function formatFecha(val){
-  if(!val || val==="S/F" || val==="") return "";
-  if(val instanceof Date){
-    if(isNaN(val.getTime())) return "";
-    const y=val.getFullYear(), m=String(val.getMonth()+1).padStart(2,"0"), d=String(val.getDate()).padStart(2,"0");
-    return `${d}/${m}/${y}`;
-  }
-  if(typeof val==="number"){
-    const dd=new Date(Math.round((val-25569)*86400*1000));
-    return `${String(dd.getUTCDate()).padStart(2,"0")}/${String(dd.getUTCMonth()+1).padStart(2,"0")}/${dd.getUTCFullYear()}`;
-  }
-  return String(val);
-}
-
-function detectFormat(rows){
-  if(!rows||!rows.length) return "simple";
-  const keys=Object.keys(rows[0]).map(k=>k.toLowerCase());
-  return (keys.includes("hoja de ruta")||keys.includes("estatus chofer"))?"excon":"simple";
-}
-
-function mapEtapa(chofer, asig){
-  const c=String(chofer||"").trim(), a=String(asig||"").trim();
-  if(c==="Entrega Completa"&&a==="Completada") return -1;
-  if(c==="Entrega Completa") return 5;
-  if(c==="Entrega Parcial")  return 4;
-  if(c==="No Entregada")     return 3;
-  return 2;
-}
-
-function normalize(rows){
-  const fmt=detectFormat(rows);
-  if(fmt==="excon"){
-    return rows.map(r=>{
-      const get=(...keys)=>{for(const k of keys){const v=r[k]??r[Object.keys(r).find(rk=>rk.toLowerCase()===k.toLowerCase())];if(v!=null&&v!=="")return v;}return "";};
-      const estatusChofer=get("Estatus Chofer"), estatusAsig=get("Estatus Asignación","Estatus Asignacion");
-      const etapaIdx=mapEtapa(estatusChofer,estatusAsig);
-      if(etapaIdx<0) return null;
-      const motivo=get("Motivo de Entrega Parcial o No Entrega");
-      const comentario=get("Comentarios");
-      const detalleParts=[comentario,motivo].filter(v=>v&&String(v).trim());
-      const nuevaFecha=get("Nueva Fecha"), fechaEntrega=get("Fecha Entrega");
-      return {
-        oc:       String(get("OC/Tarea")||""),
-        producto: `Línea ${get("Line No.")||"—"}`,
-        obra:     String(get("Hoja de Ruta")||""),
-        proveedor:String(get("Nombre Proveedor")||get("Proveedor")||""),
-        equipo:   String(get("Equipo de Retiro")||""),
-        guia:     String(get("Guia de Despacho")||""),
-        nRecep:   String(get("N° Recepcion")||""),
-        etapaIdx,
-        eta:      formatFecha((nuevaFecha&&nuevaFecha!=="S/F")?nuevaFecha:fechaEntrega),
-        detalle:  detalleParts.join(" · ")||"Sin comentarios",
-        estatusChofer: String(estatusChofer),
-        estatusAsig:   String(estatusAsig),
-      };
-    }).filter(Boolean);
-  }
-  return rows.map(r=>{
-    const etapaIdx=STAGES.findIndex(s=>s.toLowerCase()===String(r.etapa||"").trim().toLowerCase());
-    return {
-      oc:r.oc||r.OC||"", producto:r.producto||r.Producto||"", obra:r.obra||r.Obra||"",
-      proveedor:r.proveedor||r.Proveedor||"",
-      etapaIdx:etapaIdx>=0?etapaIdx:0,
-      eta:formatFecha(r.eta||r.ETA||""),
-      detalle:r.detalle||r.Detalle||r.comentario||r.Comentario||""
-    };
-  }).filter(r=>r.etapaIdx<STAGES.length-1);
-}
-
-// ── TABS ──────────────────────────────────────────────────────────────
-function switchTab(name, el){
-  document.getElementById('tab-lista').style.display = name==='lista' ? 'block' : 'none';
-  document.getElementById('tab-stats').style.display = name==='stats' ? 'block' : 'none';
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  if(name==='stats') renderStats();
-}
-
-// ── RENDER PRINCIPAL ──────────────────────────────────────────────────
-function render(){
-  const q = document.getElementById('search').value.toLowerCase();
-  const today = new Date();
-
-  let base = applyRoleFilter(pedidos);
-  if(activeStageFilter !== null)
-    base = base.filter(p => p.etapaIdx === activeStageFilter);
-  const filtered = base.filter(p =>
-    !q || [p.oc,p.producto,p.obra,p.proveedor].join(" ").toLowerCase().includes(q)
-  );
-
-  // KPIs (siempre sobre base sin filtro de etapa)
-  const roleBase = applyRoleFilter(pedidos);
-  const late = roleBase.filter(p => p.eta && new Date(p.eta) < today);
-  const obras = [...new Set(roleBase.map(p=>p.obra).filter(Boolean))];
-  document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi"><div class="n">${roleBase.length}</div><div class="l">en tránsito</div></div>
-    <div class="kpi red"><div class="n">${late.length}</div><div class="l">atrasadas</div></div>
-    <div class="kpi amber"><div class="n">${obras.length}</div><div class="l">obras activas</div></div>
-    <div class="kpi"><div class="n">${roleBase.filter(p=>p.etapaIdx===0).length}</div><div class="l">OC emitida</div></div>
-    <div class="kpi"><div class="n">${roleBase.filter(p=>p.etapaIdx===3).length}</div><div class="l">En tránsito</div></div>
-    <div class="kpi"><div class="n">${roleBase.filter(p=>p.etapaIdx===4).length}</div><div class="l">Llegó a obra</div></div>
-  `;
-
-  // Pills etapa
-  const counts = {};
-  STAGES.forEach((_,i)=>counts[i]=0);
-  roleBase.forEach(p=>counts[p.etapaIdx]++);
-  document.getElementById('stagePills').innerHTML =
-    `<div class="stage-pill ${activeStageFilter===null?'active':''}" onclick="setStageFilter(null,this)">
-      <span class="sp-dot"></span> Todas (${roleBase.length})
-    </div>` +
-    STAGES.slice(0,-1).map((s,i)=>`
-      <div class="stage-pill ${activeStageFilter===i?'active':''}" onclick="setStageFilter(${i},this)">
-        <span class="sp-dot"></span> ${s} (${counts[i]})
-      </div>`).join('');
-
-  // Tabla
-  const tbody = document.getElementById('tbody');
-  tbody.innerHTML = "";
-  document.getElementById('emptyMsg').style.display = filtered.length ? "none" : "block";
-
-  filtered.forEach(p=>{
-    const isLate = p.eta && new Date(p.eta) < today;
-    const stagesHtml = STAGES.map((s,i)=>{
-      const cls = i < p.etapaIdx ? "done" : (i===p.etapaIdx ? "current" : "");
-      const lineCls = i < p.etapaIdx ? "done" : "";
-      return `<div class="stage"><div class="dot ${cls}"></div><div class="stagelabel">${s}</div></div>`
-        + (i<STAGES.length-1 ? `<div class="line ${lineCls}"></div>` : "");
-    }).join("");
-
-    const tr = document.createElement('tr');
-    tr.className = "data-row";
-    tr.innerHTML = `
-      <td><div class="pid">${p.oc}</div><div class="psub">${p.producto}</div></td>
-      <td>${p.obra}</td>
-      <td>${p.proveedor}</td>
-      <td><div class="stages">${stagesHtml}</div></td>
-      <td>
-        <div style="font-weight:600;font-size:13px">${STAGES[p.etapaIdx]}</div>
-        <div class="eta ${isLate?'late':''}">${p.eta ? 'ETA '+p.eta : ''}${isLate?' · atrasado':''}</div>
-      </td>
-    `;
-    tbody.appendChild(tr);
-
-    const detailTr = document.createElement('tr');
-    detailTr.className = "detail-row";
-    detailTr.style.display = "none";
-    const extraFields = p.equipo ? `
-      <div class="dblock"><div class="dt">Equipo retiro</div><div class="dv">${p.equipo}</div></div>
-      <div class="dblock"><div class="dt">Guía despacho</div><div class="dv">${p.guia||'—'}</div></div>
-      <div class="dblock"><div class="dt">N° Recepción</div><div class="dv">${p.nRecep||'—'}</div></div>
-    ` : '';
-    detailTr.innerHTML = `<td colspan="5"><div class="detail-box" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
-      <div class="dblock">
-        <div class="dt">Etapa actual</div>
-        <div class="dv accent">${STAGES[p.etapaIdx]}</div>
-      </div>
-      <div class="dblock">
-        <div class="dt">ETA</div>
-        <div class="dv">${p.eta||'—'} ${isLate?'<span class="badge late">Atrasado</span>':p.eta?'<span class="badge ok">En plazo</span>':''}</div>
-      </div>
-      ${extraFields}
-      <div class="dblock" style="grid-column:1/-1">
-        <div class="dt">Comentario / Motivo</div>
-        <div class="dv">${p.detalle||'Sin detalle.'}</div>
-      </div>
-    </div></td>`;
-    tbody.appendChild(detailTr);
-
-    tr.addEventListener('click', ()=>{
-      const open = detailTr.style.display !== "none";
-      // cerrar todos
-      document.querySelectorAll('.detail-row').forEach(r=>r.style.display="none");
-      if(!open) detailTr.style.display = "table-row";
-    });
-  });
-}
-
-function setStageFilter(idx, el){
-  activeStageFilter = idx;
-  render();
-}
-
-// ── STATS ─────────────────────────────────────────────────────────────
-function renderStats(){
-  const today = new Date();
-  const roleBase = applyRoleFilter(pedidos);
-
-  // por obra
-  const obraMap = {};
-  roleBase.forEach(p=>{
-    if(!obraMap[p.obra]) obraMap[p.obra]={total:0,late:0};
-    obraMap[p.obra].total++;
-    if(p.eta && new Date(p.eta)<today) obraMap[p.obra].late++;
-  });
-  const maxObra = Math.max(...Object.values(obraMap).map(v=>v.total),1);
-  document.getElementById('obraBars').innerHTML = Object.entries(obraMap)
-    .sort((a,b)=>b[1].total-a[1].total)
-    .map(([obra,v])=>`
-      <div class="obra-bar-row" onclick="filterByObra('${obra}')">
-        <span class="obra-name">${obra}</span>
-        <div class="bar-track"><div class="bar-fill ${v.late>0?'has-late':''}" style="width:${Math.round(v.total/maxObra*100)}%"></div></div>
-        <span class="obra-count">${v.total}</span>
-      </div>`).join('') || '<div style="color:var(--muted);font-size:13px">Sin datos</div>';
-
-  // por etapa
-  const stageCount = STAGES.slice(0,-1).map((s,i)=>({s,n:roleBase.filter(p=>p.etapaIdx===i).length}));
-  const maxStage = Math.max(...stageCount.map(v=>v.n),1);
-  document.getElementById('stageBars').innerHTML = stageCount.map(({s,n})=>`
-    <div class="obra-bar-row">
-      <span class="obra-name">${s}</span>
-      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/maxStage*100)}%"></div></div>
-      <span class="obra-count">${n}</span>
-    </div>`).join('');
-
-  // atrasadas por obra
-  const lateMap = {};
-  roleBase.filter(p=>p.eta && new Date(p.eta)<today).forEach(p=>{
-    lateMap[p.obra] = (lateMap[p.obra]||0)+1;
-  });
-  const maxLate = Math.max(...Object.values(lateMap),1);
-  document.getElementById('lateBars').innerHTML = Object.entries(lateMap).length
-    ? Object.entries(lateMap).sort((a,b)=>b[1]-a[1]).map(([obra,n])=>`
-        <div class="obra-bar-row">
-          <span class="obra-name">${obra}</span>
-          <div class="bar-track"><div class="bar-fill has-late" style="width:${Math.round(n/maxLate*100)}%"></div></div>
-          <span class="obra-count">${n}</span>
-        </div>`).join('')
-    : '<div style="color:var(--color-text-secondary,#8aa092);font-size:13px">Sin atrasos 🎉</div>';
-}
-
-function filterByObra(obra){
-  switchTab('lista', document.querySelector('.tab'));
-  document.getElementById('search').value = obra;
-  render();
-}
-
-// ── IMPORTAR ──────────────────────────────────────────────────────────
-document.getElementById('search').addEventListener('input', render);
-
-document.getElementById('fileInput').addEventListener('change', e=>{
-  const file = e.target.files[0]; if(!file) return;
-  const ext = file.name.split('.').pop().toLowerCase();
-  const reader = new FileReader();
-  reader.onload = ev=>{
-    try{
-      if(ext==='json'){
-        const data = JSON.parse(ev.target.result);
-        pedidos = normalize(Array.isArray(data) ? data : (data.pedidos||[]));
-      } else {
-        const wb = XLSX.read(ev.target.result,{type:"binary", cellDates:true});
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        pedidos = normalize(XLSX.utils.sheet_to_json(ws));
-      }
-      dataSource = "file";
-      setSourceBadge("archivo cargado · " + file.name, "var(--accent)");
-      updateObraSelect();
-      render();
-    }catch(err){ alert('No se pudo leer el archivo: '+err.message); }
-  };
-  if(ext==='json') reader.readAsText(file);
-  else reader.readAsBinaryString(file);
-});
-
-// ── PLANTILLA ─────────────────────────────────────────────────────────
-function toggleTemplateMenu(){
-  const m = document.getElementById('templateMenu');
-  const btn = document.getElementById('btnPlantilla');
-  m.style.display = m.style.display === 'none' ? 'block' : 'none';
-  if(m.style.display === 'block'){
-    const r = btn.getBoundingClientRect();
-    m.style.top = (r.bottom + window.scrollY + 4) + 'px';
-    m.style.left = r.left + 'px';
-  }
-}
-document.addEventListener('click', e=>{
-  if(!e.target.closest('#btnPlantilla') && !e.target.closest('#templateMenu'))
-    document.getElementById('templateMenu').style.display = 'none';
-});
-
-function downloadTemplate(fmt){
-  document.getElementById('templateMenu').style.display = 'none';
-  const sample = [
-    {oc:"OC-2026-014",producto:"Antena Starlink Gen3",obra:"El Abra",proveedor:"Starlink Chile",etapa:"En tránsito",eta:"2026-06-25",detalle:"Despacho confirmado por courier, llega a bodega central antes de subir a faena"},
-    {oc:"OC-2026-015",producto:"Fortinet FG-100F + licencia",obra:"Faena Sur",proveedor:"Fortinet Distribuidor",etapa:"Despachada",eta:"2026-06-30",detalle:"Pendiente factura para retiro en bodega proveedor"},
-    {oc:"OC-2026-016",producto:"Cables y conectores red",obra:"El Abra",proveedor:"Proveedor Local SpA",etapa:"OC",eta:"2026-07-02",detalle:"OC enviada, esperando aprobación de gerencia"},
-    {oc:"OC-2026-017",producto:"Switch 48 puertos PoE",obra:"Lo Pinto",proveedor:"Cisco Chile",etapa:"Llegó a obra",eta:"2026-06-10",detalle:"En bodega obra, pendiente revisión TI para recepción conforme"}
-  ];
-  if(fmt === 'json'){
-    const blob = new Blob([JSON.stringify(sample,null,2)],{type:"application/json"});
-    const a = document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="plantilla_pedidos.json"; a.click();
-  } else {
-    const ws = XLSX.utils.json_to_sheet(sample);
-    // ancho de columnas
-    ws['!cols'] = [{wch:16},{wch:30},{wch:16},{wch:22},{wch:18},{wch:14},{wch:50}];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Pedidos");
-    // hoja instrucciones
-    const inst = XLSX.utils.aoa_to_sheet([
-      ["Columna","Descripción"],
-      ["oc","N° de orden de compra, único por pedido"],
-      ["producto","Nombre del producto o ítem comprado"],
-      ["obra","Obra o faena destino"],
-      ["proveedor","Nombre del proveedor"],
-      ["etapa","Una de: OC · Aprobada · Despachada · En tránsito · Llegó a obra · Recepción conforme"],
-      ["eta","Fecha estimada de llegada, formato AAAA-MM-DD"],
-      ["detalle","Comentario libre (se muestra al hacer clic en la fila)"],
-      ["","IMPORTANTE: filas con etapa = Recepción conforme NO se muestran en el dashboard (cerradas)"],
-    ]);
-    inst['!cols'] = [{wch:14},{wch:75}];
-    XLSX.utils.book_append_sheet(wb, inst, "Instrucciones");
-    XLSX.writeFile(wb, "plantilla_pedidos.xlsx");
-  }
-}
-
-// ── INIT ─────────────────────────────────────────────────────────
-(async function init(){
-  if(SHEET_CSV_URL){
-    await fetchSheet();
-  } else {
-    setSourceBadge("carga manual · importa un archivo", "var(--muted)");
-    render();
-  }
-})();
-</script>
-</body>
-</html>
+]
